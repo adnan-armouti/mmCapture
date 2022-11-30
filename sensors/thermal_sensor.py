@@ -1,10 +1,12 @@
 # thermal sensor
-
+import multiprocessing as mp
 import imageio
 import numpy as np
 import sys
 import os
 import cv2
+from datetime import datetime
+import time
 
 from config import *
 from sensor import Sensor
@@ -28,7 +30,7 @@ class Thermal_Sensor(Sensor):
         self.counter = 0
 
         kargs = { 'fps': self.fps, 'ffmpeg_params': ['-s',str(self.width) + 'x' + str(self.height)] }
-        self.reader = imageio.get_reader('<video1>', format = "FFMPEG", dtype = "uint16", fps = self.fps)
+        self.reader = imageio.get_reader('<video0>', format = "FFMPEG", dtype = "uint16", fps = self.fps)
 
     def __del__(self) -> None:
         self.release_sensor()
@@ -92,7 +94,41 @@ class Thermal_Sensor(Sensor):
             self.save_timestamps()
             self.time_stamps = []
 
-        
+    def buffer(self):
+        NUM_FRAMES = 1  # number of images to capture
+        frames = np.empty((NUM_FRAMES, self.height, self.width), np.dtype('uint16'))
+        for im in self.reader:
+            frames[self.counter] = im[:,:,0]
+            self.record_timestamp()
+            break
+        self.time_stamps = []
+
+    def acquire_save_multiprocess(self, acquisition_time : int, save_time : int) -> bool:
+        NUM_FRAMES = self.fps*acquisition_time  # number of images to capture
+        parent_conn, child_conn = mp.Pipe()
+        SAVE_FRAMES = self.fps*save_time  # number of images to capture
+        ded_save_1 = mp.Process(target=thermal_dedicated_save, \
+                        args=(SAVE_FRAMES, child_conn, self.height, self.width, self.filepath, self.format))
+        ded_save_1.start()
+        prev_frame = np.zeros((self.height, self.width), np.dtype('uint16'))
+        for im in self.reader:
+            process_time = time.perf_counter()
+            global_time = str(datetime.now())
+            if (self.counter < NUM_FRAMES):
+                # upsampled_frame = im[:,:,0]
+                # downsampled_frame = upsampled_frame[::2,::2]
+                downsampled_frame = im[:,:,0]
+                if ( np.max(downsampled_frame - prev_frame) != 0 ):
+                    parent_conn.send(downsampled_frame) # Reads 3 channels, but each channel is identical (same pixel info)
+                    parent_conn.send(process_time)
+                    parent_conn.send(global_time)
+                    self.counter += 1
+                    prev_frame = downsampled_frame
+            else:
+                break
+        parent_conn.close()
+        ded_save_1.join()
+
     def release_sensor(self) -> bool:
         #Release camera
         pass
@@ -102,6 +138,33 @@ class Thermal_Sensor(Sensor):
         print("FPS Requested = {} f/s".format(self.fps))
         print("FPS Recorded = {} f/s".format(int(self.reader.get_meta_data()['fps'])))
         print("Resolution = {} x {}".format(self.width, self.height))
+
+def thermal_dedicated_save(SAVE_FRAMES, child_conn, height, width, filepath, format):
+    count = 0
+    while True:
+        time_stamps = []
+        local_time_stamps = []
+        count += 1
+        fp = np.memmap(filepath + f'_{count}.dat', dtype='uint16', mode='w+', shape=(SAVE_FRAMES, height, width))
+        # Save the frames in the specified files
+        for i in range(SAVE_FRAMES):
+            try:
+                frame = child_conn.recv().reshape((height, width))
+                fp[i] = frame
+                fp.flush()
+                time_stamps.append(child_conn.recv())
+                local_time_stamps.append(child_conn.recv())
+            except EOFError:
+                return
+        # Save the time stamps in the specified files
+        try:
+            with open(filepath + f"_{count}.txt", "w") as output:
+                output.write('\n'.join([str(stamp) for stamp in time_stamps]))
+            with open(filepath + f"_{count}_local.txt", "w") as output:
+                output.write('\n'.join([stamp for stamp in local_time_stamps]))
+        except:
+            print("failed time stamp saving")
+            return
 
 # #To test code, run this file.
 if __name__ == '__main__':

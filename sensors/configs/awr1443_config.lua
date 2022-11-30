@@ -87,7 +87,6 @@ ar1.GetBSSFwVersion()
 --------
 
 -------- STATIC CONFIG STUFF --------
--- ar1.ChanNAdcConfig(1, 0, 0, 1, 0, 0, 0, 2, 1, 0)
 ar1.ChanNAdcConfig(1, 0, 0, 1, 0, 0, 0, 2, 1, 0)
 ar1.LPModConfig(0, 0)
 ar1.RfInit()
@@ -96,18 +95,15 @@ ar1.RfInit()
 -------- DATA CONFIG STUFF --------
 ar1.DataPathConfig(513, 1216644097, 0)
 ar1.LvdsClkConfig(1, 1)
--- ar1.LVDSLaneConfig(0, 1, 1, 0, 0, 1, 0, 0)
-ar1.LVDSLaneConfig(0, 1, 0, 0, 0, 1, 0, 0)
+ar1.LVDSLaneConfig(0, 1, 1, 0, 0, 1, 0, 0)
 -----------------------------------
 
 -------- SENSOR CONFIG STUFF --------
--- ar1.ProfileConfig(0, START_FREQ, IDLE_TIME, ADC_START_TIME, RAMP_END_TIME, 0, 0, 0, 0, 0, 0, FREQ_SLOPE, TX_START_TIME, ADC_SAMPLES, SAMPLE_RATE, 0, 0, RX_GAIN)
-ar1.ProfileConfig(0, 77, 30, 7, 62, 0, 0, 0, 0, 0, 0, 60.012, 1, 256, 5000, 0, 0, 30)
--- ar1.ChirpConfig(0, 0, 0, 0, 0, 0, 0, 1, 0, 0)
+ar1.ProfileConfig(0, START_FREQ, IDLE_TIME, ADC_START_TIME, RAMP_END_TIME, 0, 0, 0, 0, 0, 0, FREQ_SLOPE, TX_START_TIME, ADC_SAMPLES, SAMPLE_RATE, 0, 0, RX_GAIN)
 ar1.ChirpConfig(0, 0, 0, 0, 0, 0, 0, 1, 0, 0)
--- ar1.FrameConfig(START_CHIRP_TX, END_CHIRP_TX, NUM_FRAMES, CHIRP_LOOPS, PERIODICITY, 0, 0, 1)
-ar1.FrameConfig(0, 0, 0, 64, 33.33334, 0, 0, 1)
-
+-- ar1.ChirpConfig(1, 1, 0, 0, 0, 0, 0, 0, 1, 0)
+-- ar1.ChirpConfig(2, 2, 0, 0, 0, 0, 0, 0, 1, 0)
+ar1.FrameConfig(START_CHIRP_TX, END_CHIRP_TX, NUM_FRAMES, CHIRP_LOOPS, PERIODICITY, 0, 0, 1)
 -------------------------------------
 
 -------- ETHERNET STUFF --------

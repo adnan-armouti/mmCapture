@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import cv2
 import imageio
+import multiprocessing as mp
 import PyCapture2
+import time
+from datetime import datetime
 
 from sensor import Sensor
 from config import *
@@ -116,7 +119,49 @@ class NIR_Sensor(Sensor):
 
             self.save_timestamps()
             self.time_stamps = []
+
+    def buffer(self):
+        NUM_FRAMES = 1  # number of images to capture
+        frames = np.empty((NUM_FRAMES, self.height, self.width), np.dtype('uint8'))
+        for i in range(NUM_FRAMES):
+            try:
+                image = self.cam_nir.retrieveBuffer()
+                self.record_timestamp()
+                im_arr = np.array(image.getData(), dtype="uint8").reshape((image.getRows(), image.getCols()) )
+            except PyCapture2.Fc2error as fc2Err:
+                print('Error retrieving buffer : %s' % fc2Err)
+                continue
+            frames[i] = im_arr
+        self.time_stamps = []
             
+    def acquire_save_multiprocess(self, acquisition_time : int, save_time : int) -> bool:
+        # Instantiate a pipe for getting data for saving
+        parent_conn, child_conn = mp.Pipe()
+        SAVE_FRAMES = self.fps*save_time  # number of images to capture
+        # Start the acquisition
+        TOTAL_NUM_FRAMES = int(self.fps*acquisition_time)  # number of images to capture
+        
+        # Main part for acquire
+        ded_save_1 = mp.Process(target=nir_dedicated_save, \
+                        args=(SAVE_FRAMES, child_conn, self.height, self.width, self.filepath, self.format))
+        ded_save_1.start()
+        for i in range(TOTAL_NUM_FRAMES):
+            try:
+                image = self.cam_nir.retrieveBuffer()
+                process_time = time.perf_counter()
+                global_time = str(datetime.now())
+                im_arr = np.array(image.getData(), dtype="uint8")
+                parent_conn.send(im_arr)
+                parent_conn.send(process_time)
+                parent_conn.send(global_time)
+            except PyCapture2.Fc2error as fc2Err:
+                print('Error retrieving buffer : %s' % fc2Err)
+                continue
+        parent_conn.close()
+        
+        # Hold if any process is alive
+        ded_save_1.join()
+
     def release_sensor(self) -> bool:
         # Deinitialize camera
         self.cam_nir.stopCapture()
@@ -137,7 +182,34 @@ class NIR_Sensor(Sensor):
         print('Firmware build time - ', cam_info.firmwareBuildTime)
         print()
 
-# #To test code, run this file.
+def nir_dedicated_save(SAVE_FRAMES, child_conn, height, width, filepath, format):
+    count = 0
+    while True:
+        time_stamps = []
+        local_time_stamps = []
+        count += 1
+        fp = np.memmap(filepath + f'_{count}.dat', dtype='uint8', mode='w+', shape=(SAVE_FRAMES, height, width))
+        # Save the frames in the specified files
+        for i in range(SAVE_FRAMES):
+            try:
+                frame = child_conn.recv().reshape((height, width))
+                fp[i] = frame
+                fp.flush()
+                time_stamps.append(child_conn.recv())
+                local_time_stamps.append(child_conn.recv())
+            except EOFError:
+                return
+        # Save the time stamps in the specified files
+        try:
+            with open(filepath + f"_{count}.txt", "w") as output:
+                output.write('\n'.join([str(stamp) for stamp in time_stamps]))
+            with open(filepath + f"_{count}_local.txt", "w") as output:
+                output.write('\n'.join([stamp for stamp in local_time_stamps]))
+        except:
+            print("failed time stamp saving")
+            return
+
+# To test code, run this file.
 if __name__ == '__main__':
 
     nir_cam = NIR_Sensor(filename="nir_output_2")

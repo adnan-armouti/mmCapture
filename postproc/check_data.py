@@ -31,34 +31,12 @@ def aslist(value, flatten=True):
 
 def get_sensor_files_list(file_path, sensor):
     sensor_files_list = []
-    if (sensor == "rgb" or sensor == "thermal" or sensor == "uv" or sensor == "nir"):
+    if (sensor == "thermal" or sensor == "nir"):
         sensor_files_list.append(os.path.join(file_path, sensor + ".tiff") )
         sensor_files_list.append(os.path.join(file_path, sensor + ".txt") )
         sensor_files_list.append(os.path.join(file_path, sensor + "_local.txt") )
         if (config.getint("mmhealth", "tiff_to_avi") == 1):
             sensor_files_list.append(os.path.join(file_path, sensor + "_avi.avi") )
-
-    elif (sensor == "polarized"):
-        sensor_files_list.append(os.path.join(file_path, sensor + "_0.tiff") )
-        sensor_files_list.append(os.path.join(file_path, sensor + "_45.tiff") )
-        sensor_files_list.append(os.path.join(file_path, sensor + "_90.tiff") )
-        sensor_files_list.append(os.path.join(file_path, sensor + "_135.tiff") )
-        sensor_files_list.append(os.path.join(file_path, sensor + ".txt") )
-        sensor_files_list.append(os.path.join(file_path, sensor + "_local.txt") )
-        if (config.getint("mmhealth", "tiff_to_avi") == 1):
-            sensor_files_list.append(os.path.join(file_path, sensor + "_0_avi.avi") )
-            sensor_files_list.append(os.path.join(file_path, sensor + "_45_avi.avi") )
-            sensor_files_list.append(os.path.join(file_path, sensor + "_90_avi.avi") )
-            sensor_files_list.append(os.path.join(file_path, sensor + "_135_avi.avi") )
-    
-    elif (sensor == "rgbd"):
-        sensor_files_list.append(os.path.join(file_path, sensor + "_rgb.tiff") )
-        sensor_files_list.append(os.path.join(file_path, sensor + "_depth.tiff") )
-        sensor_files_list.append(os.path.join(file_path, sensor + ".txt") )
-        sensor_files_list.append(os.path.join(file_path, sensor + "_local.txt") )
-        if (config.getint("mmhealth", "tiff_to_avi") == 1):
-            sensor_files_list.append(os.path.join(file_path, sensor + "_rgb_avi.avi") )
-            sensor_files_list.append(os.path.join(file_path, sensor + "_depth_avi.avi") )
 
     elif (sensor == "rf"):
         sensor_files_list.append(os.path.join(file_path, sensor + ".pkl") )
@@ -78,8 +56,6 @@ def get_sensor_files_list(file_path, sensor):
         sensor_files_list.append(os.path.join(file_path, "NOM_RESPWaveExport.csv") ) 
         sensor_files_list.append(os.path.join(file_path, "MPDataExport.csv") )
         sensor_files_list.append(os.path.join(file_path, "MPrawoutput.txt") )
-        sensor_files_list.append(os.path.join(file_path, "vital_matrix.npy") )
-        
 
     return sensor_files_list
         # if (config.getint("mmhealth", "read_rf_pkl") == 1):
@@ -96,12 +72,7 @@ def get_img_stats(video_path):
     path = os.path.dirname(video_path)
     filename_ext = os.path.basename(video_path)
     filename = os.path.splitext(filename_ext)[0]
-    if( (filename == "rgbd_depth") or (filename == "rgbd_rgb") ):
-        time_stamp_file = os.path.join(path, "rgbd_local.txt")
-    elif( (filename == "polarized_0") or (filename == "polarized_45") or (filename == "polarized_90") or (filename == "polarized_135") ):
-        time_stamp_file = os.path.join(path, "polarized_local.txt")
-    else:
-        time_stamp_file = os.path.splitext(video_path)[0] + "_local.txt"
+    time_stamp_file = os.path.splitext(video_path)[0] + "_local.txt"
     # print(time_stamp_file)
     time_stamps = np.genfromtxt(time_stamp_file, delimiter='\n')
     fps = num_frames / (time_stamps[-1] - time_stamps[0])
@@ -146,8 +117,6 @@ def compare_config(sensors_dict): # compare against input config (avg_pixel_delt
                 upper_bound = config.getint(config_tag, data_key) + config.getint(config_tag, data_key + "_delta")
 
             data_value = data_dict[data_key]
-            if (sensor_type == "rgbd" or sensor_type == "rgb" or sensor_type == "uv"):
-                data_value = np.mean(data_value)
             if (np.isnan(data_value)):
                 data_value = 0
             data_value = int(data_value)
@@ -170,7 +139,7 @@ def check_data_folder(dir_path):
     cameras = sensors_list_str
 
     for sensor in cameras:
-        if (sensor != "rgbd" and  sensor != "rgb" and sensor != "polarized" and  sensor != "nir" and sensor != "thermal" and  sensor != "uv"):
+        if (sensor != "nir" and sensor != "thermal"):
             cameras.remove(sensor)
 
     file_list = os.listdir(dir_path)
@@ -203,4 +172,4 @@ def check_data_folder(dir_path):
 if __name__ == '__main__':
 
 
-    check_data_folder(r"E:\mmhealth_data\5_13")
+    check_data_folder(r"E:\mmhealth_data\5_3")
