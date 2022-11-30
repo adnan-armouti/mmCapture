@@ -1,5 +1,7 @@
 # mmcapture
 
+**Contributing Authors**: [Adnan Armouti](https://github.com/adnan-armouti) (both branches), [Alexander (Sasha) Vilesov](https://github.com/asvilesov/) (main branch), [Anirudh Bindiganavale Harish](https://github.com/Anirudh0707) (low_light branch).
+
 This repository captures software-triggered raw multimodal (image, rf, audio) synchronous data from a sensor stack.
 
 All code currently under development; please see disclaimer at the end of this README. The "main" branch has a more extensive set of sensors that record videos up to 30 seconds long (subject to RAM limitations), while the "low_light" branch is optimized for a smaller set of sensors that record data per frame (bypassing RAM limitations).
